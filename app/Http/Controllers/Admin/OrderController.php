@@ -11,6 +11,9 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\StoreInformation;
+use SteadFast\SteadFastCourierLaravelPackage\Facades\SteadfastCourier;
+use Illuminate\Support\Facades\Http;
+use App\Helpers\CourierCredentialHelper;
 
 class OrderController extends Controller
 {
@@ -78,10 +81,13 @@ class OrderController extends Controller
             'ordered_quantity' => 'required|integer',
         ]);
 
-        // Get delivery zone details
         $deliveryZone = DeliveryCharge::find($validatedData['delivery_zone_id']);
 
+        $lastOrderId = Order::max('id') ?? 0; // Get the last order ID
+        $invoiceNumber = 'MSBD-ORD-' . str_pad($lastOrderId + 1, 6, '0', STR_PAD_LEFT); 
+
         $order = Order::create([
+            'invoice' => $invoiceNumber,
             'customer_contact' => $validatedData['customer_contact'],
             'customer_name' => $validatedData['customer_name'],
             'customer_address' => $validatedData['customer_address'],
@@ -96,41 +102,111 @@ class OrderController extends Controller
             'ordered_quantity' => $validatedData['ordered_quantity'],
         ]);
 
-        foreach ($validatedData['products'] as $productData) {
-            $product = Product::find($productData['id']);
-
-            if ($product) {
-                $totalPrice = $product->price * $productData['quantity'];
-
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $productData['id'],
-                    'quantity' => $productData['quantity'],
-                    'price' => $product->price,
-                    'total_price' => $totalPrice,
-                ]);
-
-                if ($validatedData['order_status'] == 'completed') {
-                    $newStockQuantity = $product->stock_quantity - $productData['quantity'];
-                    if ($newStockQuantity >= 0) {
-                        $product->stock_quantity = $newStockQuantity;
-                        $product->save();
-
-                        Inventory::create([
-                            'product_id' => $product->id,
-                            'ordered_quantity' => $productData['quantity'],
-                            'stock_quantity' => $newStockQuantity,
-                            'order_id' => $order->id,
-                            'initial_quantity' => $product->initial_quantity,
-                        ]);
-                    } else {
-                        return back()->with('error', 'Not enough stock for product ' . $product->title);
-                    }
-                }
-            }
-        }
-
         return redirect()->route('admin.orders.index')->with('success', 'Order created successfully!');
+    }
+
+    public function assignDeliveryPartner(Request $request)
+    {
+        $validatedData = $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'delivery_partner_id' => 'required|exists:delivery_partners,id',
+        ]);
+
+        $order_info = Order::findOrFail($validatedData['order_id']);
+       
+
+        // $orderData = [
+        //     'invoice' => $order_info->invoice,
+        //     'recipient_name' => $order_info->customer_name,
+        //     'recipient_phone' => $order_info->customer_contact,
+        //     'recipient_address' => $order_info->customer_address,
+        //     'cod_amount' => $order_info->total_price,
+        //     'note' => 'Handle with care'
+        // ];
+        
+        // // Get credentials from the helper
+        // $credentials = CourierCredentialHelper::getSteadfastCredentials();
+       
+        // // Construct the API request
+        // $response = Http::withHeaders([
+        //     'Api-Key'      => $credentials['api_key'],
+        //     'Secret-Key'   => $credentials['secret_key'],
+        //     'Content-Type' => 'application/json',
+        // ])->post('https://portal.steadfast.com.bd/api/v1/create_order', $orderData);
+
+        // // Decode and process response
+        // $responseData = $response->json();
+
+        // if ($response->successful() && isset($responseData['consignment'])) {
+        //     $consignment = $responseData['consignment'];
+
+        //     $order_info->update([
+        //         'courier_partner'   => 'steadfast',
+        //         'order_status'      => 'shipped',
+        //         'trackingid'        => $consignment['tracking_code'],
+        //         'courier_response'  => json_encode($responseData),
+        //     ]);
+        // } else {
+        //     $order_info->update([
+        //         'courier_partner'   => 'steadfast',
+        //         'courier_response'  => json_encode($responseData),
+        //     ]);
+        // }
+        
+           
+            $redxCredentials = CourierCredentialHelper::getRedxCredentials();
+            $apiToken = $redxCredentials['api_token'];
+
+            $products = json_decode($order_info->products, true);
+            $parcelDetails = [];
+    
+            foreach ($products as $product) {
+                $parcelDetails[] = [
+                    'name'     => 'productName',
+                    'category' => 'General',
+                    'value'    => (float)$product['price'],
+                ];
+            }
+            
+            $payload = [
+                "customer_name"          => $order_info->customer_name,
+                "customer_phone"         => $order_info->customer_contact,
+                "delivery_area"          => $order_info->zone_name ?? "Dhaka",
+                "delivery_area_id"       => $order_info->delivery_zone_id ?? 12,
+                "customer_address"       => $order_info->customer_address,
+                "merchant_invoice_id"    => $order_info->invoice,
+                "cash_collection_amount" => $order_info->total_price,
+                "parcel_weight"          => 500,
+                "instruction"            => "Handle with care",
+                "value"                  => 100,
+                "is_closed_box"          => false,
+                "pickup_store_id"        => 1,
+                "parcel_details_json"    => $parcelDetails,
+            ];
+   
+            $response = Http::withHeaders([
+                'API-ACCESS-TOKEN' => 'Bearer ' . $apiToken,
+                'Content-Type' => 'application/json',
+            ])->post('sandbox.redx.com.bd/v1.0.0-beta/parcel', $payload);
+            
+            $responseData = $response->json();
+
+            if (isset($responseData['tracking_id'])) {
+                $order_info->update([
+                    'courier_partner'   => 'redx',
+                    'courier_response'  => json_encode($responseData),
+                    'trackingid'        => $responseData['tracking_id'],
+                    'order_status'      => 'shipped',
+                ]);
+            } else {
+                $order_info->update([
+                    'courier_partner'   => 'redx',
+                    'courier_response'  => json_encode($responseData),
+                ]);
+            }
+            
+
+        return redirect()->back()->with('success', 'Delivery partner assigned successfully!');
     }
 
     public function show(string $id)

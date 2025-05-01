@@ -133,6 +133,9 @@
 
         <div class="card">
             <div class="card-body">
+                @if(session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
                 <div class="table-responsive" style="overflow: visible !important;">
                     <table id="example2" class="table table-striped table-bordered radius-10">
                         <thead class="table-light text-dark-blue">
@@ -147,7 +150,7 @@
                                 <th>Products</th>
                                 <th>Status</th>
                                 <th>Delivery partner</th>
-                                <th>Courier Status</th>
+                                <th>Courier Tracking</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -170,21 +173,23 @@
                                 <td>{{ $order->order_status }}</td>
                                 <td>
                                     <div class="dropdown">
-                                        <button class="btn btn-primary btn-sm dropdown-toggle" type="button"
-                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             Select Courier
                                         </button>
                                         <ul class="dropdown-menu">
                                             @forelse($activePartners as $partner)
                                             <li>
-                                                @if($partner->slug === 'steadfast')
-                                                <form action="" method="POST"
-                                                    onsubmit="return confirm('Are you sure you want to place this order to {{ $partner->partner_name }}?');">
+                                                <form id="courierForm-{{ $partner->slug }}" action="{{ route('orders.assignDeliveryPartner') }}" method="POST" style="display: none;">
                                                     @csrf
-                                                    <button type="submit" class="dropdown-item">{{ $partner->partner_name }}</button>
+                                                    <input type="hidden" name="order_id" value="{{ $order->id }}">
+                                                    <input type="hidden" name="delivery_partner_id" value="{{ $partner->id }}">
                                                 </form>
+                                                @if($partner->slug === 'steadfast')
+                                                <button type="button" class="dropdown-item" onclick="submitCourierForm('{{ $partner->slug }}', '{{ $partner->partner_name }}')">
+                                                    {{ $partner->partner_name }}
+                                                </button>
                                                 @else
-                                                <a class="dropdown-item courier-option" href="javascript:void(0);" onclick="confirmCourier('{{ $partner->partner_name }}')">
+                                                <a class="dropdown-item courier-option" href="javascript:void(0);" onclick="submitCourierForm('{{ $partner->slug }}', '{{ $partner->partner_name }}')">
                                                     {{ $partner->partner_name }}
                                                 </a>
                                                 @endif
@@ -197,7 +202,7 @@
                                 </td>
 
                                 <td>
-                                    N/A
+                                    {{ $order->trackingid }}
                                 </td>
 
                                 <!-- Three-Dot Dropdown for Actions -->
@@ -283,6 +288,12 @@
                 row.style.display = 'none'; // Hide the row
             }
         });
+    }
+
+    function submitCourierForm(slug, partnerName) {
+        if (confirm('Are you sure you want to place this order to ' + partnerName + '?')) {
+            document.getElementById('courierForm-' + slug).submit();
+        }
     }
 </script>
 

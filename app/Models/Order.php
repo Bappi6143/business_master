@@ -16,7 +16,7 @@ class Order extends Model
         'customer_contact', 'customer_name', 'customer_address', 
         'products', 'order_status', 'delivery_zone_id', 'zone_name',
         'delivery_charge', 'subtotal', 'discount_amount',
-        'total_price', 'ordered_quantity'
+        'total_price', 'ordered_quantity', 'invoice','courier_partner','trackingid', 'courier_response',
     ];
 
     public function orderItems()

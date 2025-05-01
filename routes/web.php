@@ -119,6 +119,9 @@ Route::post('/buy-now/{id}', [CartController::class, 'buyNow'])->name('cart.buyN
 
     // Orders
     Route::resource('orders', OrderController::class);
+    Route::post('assign-delivery-partner', [OrderController::class, 'assignDeliveryPartner'])->name('orders.assignDeliveryPartner');
+
+
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('orders', OrderController::class);
     });
