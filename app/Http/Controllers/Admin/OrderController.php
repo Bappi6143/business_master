@@ -115,95 +115,95 @@ class OrderController extends Controller
         $order_info = Order::findOrFail($validatedData['order_id']);
        
 
-        // $orderData = [
-        //     'invoice' => $order_info->invoice,
-        //     'recipient_name' => $order_info->customer_name,
-        //     'recipient_phone' => $order_info->customer_contact,
-        //     'recipient_address' => $order_info->customer_address,
-        //     'cod_amount' => $order_info->total_price,
-        //     'note' => 'Handle with care'
-        // ];
+        $orderData = [
+            'invoice' => $order_info->invoice,
+            'recipient_name' => $order_info->customer_name,
+            'recipient_phone' => $order_info->customer_contact,
+            'recipient_address' => $order_info->customer_address,
+            'cod_amount' => $order_info->total_price,
+            'note' => 'Handle with care'
+        ];
         
-        // // Get credentials from the helper
-        // $credentials = CourierCredentialHelper::getSteadfastCredentials();
-       
-        // // Construct the API request
-        // $response = Http::withHeaders([
-        //     'Api-Key'      => $credentials['api_key'],
-        //     'Secret-Key'   => $credentials['secret_key'],
-        //     'Content-Type' => 'application/json',
-        // ])->post('https://portal.steadfast.com.bd/api/v1/create_order', $orderData);
+        // Get credentials from the helper
+        $credentials = CourierCredentialHelper::getSteadfastCredentials();
+  
+        // Construct the API request
+        $response = Http::withHeaders([
+            'Api-Key'      => $credentials['api_key'],
+            'Secret-Key'   => $credentials['secret_key'],
+            'Content-Type' => 'application/json',
+        ])->post('https://portal.steadfast.com.bd/api/v1/create_order', $orderData);
 
-        // // Decode and process response
-        // $responseData = $response->json();
+        // Decode and process response
+        $responseData = $response->json();
 
-        // if ($response->successful() && isset($responseData['consignment'])) {
-        //     $consignment = $responseData['consignment'];
+        if ($response->successful() && isset($responseData['consignment'])) {
+            $consignment = $responseData['consignment'];
 
-        //     $order_info->update([
-        //         'courier_partner'   => 'steadfast',
-        //         'order_status'      => 'shipped',
-        //         'trackingid'        => $consignment['tracking_code'],
-        //         'courier_response'  => json_encode($responseData),
-        //     ]);
-        // } else {
-        //     $order_info->update([
-        //         'courier_partner'   => 'steadfast',
-        //         'courier_response'  => json_encode($responseData),
-        //     ]);
-        // }
+            $order_info->update([
+                'courier_partner'   => 'steadfast',
+                'order_status'      => 'shipped',
+                'trackingid'        => $consignment['tracking_code'],
+                'courier_response'  => json_encode($responseData),
+            ]);
+        } else {
+            $order_info->update([
+                'courier_partner'   => 'steadfast',
+                'courier_response'  => json_encode($responseData),
+            ]);
+        }
         
            
-            $redxCredentials = CourierCredentialHelper::getRedxCredentials();
-            $apiToken = $redxCredentials['api_token'];
+            // $redxCredentials = CourierCredentialHelper::getRedxCredentials();
+            // $apiToken = $redxCredentials['api_token'];
 
-            $products = json_decode($order_info->products, true);
-            $parcelDetails = [];
+            // $products = json_decode($order_info->products, true);
+            // $parcelDetails = [];
     
-            foreach ($products as $product) {
-                $parcelDetails[] = [
-                    'name'     => 'productName',
-                    'category' => 'General',
-                    'value'    => (float)$product['price'],
-                ];
-            }
+            // foreach ($products as $product) {
+            //     $parcelDetails[] = [
+            //         'name'     => 'productName',
+            //         'category' => 'General',
+            //         'value'    => (float)$product['price'],
+            //     ];
+            // }
             
-            $payload = [
-                "customer_name"          => $order_info->customer_name,
-                "customer_phone"         => $order_info->customer_contact,
-                "delivery_area"          => $order_info->zone_name ?? "Dhaka",
-                "delivery_area_id"       => $order_info->delivery_zone_id ?? 12,
-                "customer_address"       => $order_info->customer_address,
-                "merchant_invoice_id"    => $order_info->invoice,
-                "cash_collection_amount" => $order_info->total_price,
-                "parcel_weight"          => 500,
-                "instruction"            => "Handle with care",
-                "value"                  => 100,
-                "is_closed_box"          => false,
-                "pickup_store_id"        => 1,
-                "parcel_details_json"    => $parcelDetails,
-            ];
+            // $payload = [
+            //     "customer_name"          => $order_info->customer_name,
+            //     "customer_phone"         => $order_info->customer_contact,
+            //     "delivery_area"          => $order_info->zone_name ?? "Dhaka",
+            //     "delivery_area_id"       => $order_info->delivery_zone_id ?? 12,
+            //     "customer_address"       => $order_info->customer_address,
+            //     "merchant_invoice_id"    => $order_info->invoice,
+            //     "cash_collection_amount" => $order_info->total_price,
+            //     "parcel_weight"          => 500,
+            //     "instruction"            => "Handle with care",
+            //     "value"                  => 100,
+            //     "is_closed_box"          => false,
+            //     "pickup_store_id"        => 1,
+            //     "parcel_details_json"    => $parcelDetails,
+            // ];
    
-            $response = Http::withHeaders([
-                'API-ACCESS-TOKEN' => 'Bearer ' . $apiToken,
-                'Content-Type' => 'application/json',
-            ])->post('sandbox.redx.com.bd/v1.0.0-beta/parcel', $payload);
+            // $response = Http::withHeaders([
+            //     'API-ACCESS-TOKEN' => 'Bearer ' . $apiToken,
+            //     'Content-Type' => 'application/json',
+            // ])->post('sandbox.redx.com.bd/v1.0.0-beta/parcel', $payload);
             
-            $responseData = $response->json();
+            // $responseData = $response->json();
 
-            if (isset($responseData['tracking_id'])) {
-                $order_info->update([
-                    'courier_partner'   => 'redx',
-                    'courier_response'  => json_encode($responseData),
-                    'trackingid'        => $responseData['tracking_id'],
-                    'order_status'      => 'shipped',
-                ]);
-            } else {
-                $order_info->update([
-                    'courier_partner'   => 'redx',
-                    'courier_response'  => json_encode($responseData),
-                ]);
-            }
+            // if (isset($responseData['tracking_id'])) {
+            //     $order_info->update([
+            //         'courier_partner'   => 'redx',
+            //         'courier_response'  => json_encode($responseData),
+            //         'trackingid'        => $responseData['tracking_id'],
+            //         'order_status'      => 'shipped',
+            //     ]);
+            // } else {
+            //     $order_info->update([
+            //         'courier_partner'   => 'redx',
+            //         'courier_response'  => json_encode($responseData),
+            //     ]);
+            // }
             
 
         return redirect()->back()->with('success', 'Delivery partner assigned successfully!');

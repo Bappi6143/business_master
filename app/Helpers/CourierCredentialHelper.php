@@ -28,7 +28,7 @@ class CourierCredentialHelper
 
             return [
                 'api_key'    => $credentials['api_key'] ?? '',
-                'secret_key' => $credentials['secret_key'] ?? '',
+                'secret_key' => $credentials['api_secret'] ?? '',
             ];
         }
 
