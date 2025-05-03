@@ -39,6 +39,21 @@ Route::get('/', function () {
     return Auth::check() ? redirect()->route('dashboard') : view('authenticate.login');
 });
 
+ // Website Routes
+ Route::get('/home', [LandingPageController::class, 'index'])->name('home');
+ Route::get('/shop', [ShopController::class, 'index'])->name('shop');
+ Route::get('/shop_detail', [ShopController::class, 'details'])->name('shop-detail');
+ Route::get('/cart', [CartController::class, 'index'])->name('cart');
+ Route::post('/cart/add/{id}', [CartController::class, 'addToCart'])->name('cart.add');
+ Route::post('/cart/update', [CartController::class, 'updateCart'])->name('cart.update');
+ Route::get('/cart/order-now/{id}', [CartController::class, 'orderNow'])->name('cart.orderNow');
+ Route::get('/cart/remove/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
+ // New Buy Now Route for Single Product Checkout (Separate Session)
+ Route::post('/buy-now/{id}', [CartController::class, 'buyNow'])->name('cart.buyNow');
+ Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+ Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+
 // Middleware for authenticated users with status check
 Route::middleware(['auth', 'tenant', 'user.status'])->group(function () {
     
@@ -48,16 +63,6 @@ Route::middleware(['auth', 'tenant', 'user.status'])->group(function () {
     // Settings
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-
-    // Website Routes
-    Route::get('/home', [LandingPageController::class, 'index'])->name('home');
-    Route::get('/shop', [ShopController::class, 'index'])->name('shop');
-    Route::get('/shop_detail', [ShopController::class, 'details'])->name('shop-detail');
-    Route::get('/cart', [CartController::class, 'index'])->name('cart');
-    Route::post('/cart/add/{id}', [CartController::class, 'addToCart'])->name('cart.add');
-    Route::post('/cart/update', [CartController::class, 'updateCart'])->name('cart.update');
-    Route::get('/cart/order-now/{id}', [CartController::class, 'orderNow'])->name('cart.orderNow');
-    Route::get('/cart/remove/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
 
 
     // report
@@ -72,16 +77,8 @@ Route::middleware(['auth', 'tenant', 'user.status'])->group(function () {
     Route::get('/privacy-policy', [PrivacyPolicyController::class, 'index'])->name('privacy-policy');
     Route::get('/terms_conditions', [PrivacyPolicyController::class, 'termsConditions'])->name('terms_conditions');
 
-    // check-out
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    // check-out for admin dashboard
     Route::delete('/checkout/{id}', [WebsiteCheackOutController::class, 'destroy'])->name('checkout.destroy');
-
-    // New Buy Now Route for Single Product Checkout (Separate Session)
-Route::post('/buy-now/{id}', [CartController::class, 'buyNow'])->name('cart.buyNow');
-
-
-    Route::post('/checkout/store', [CheckoutController::class, 'store'])->name('checkout.store');
-    Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 
     // shop-detail
     Route::get('/product-detail/{id}', [ProductController::class, 'show'])->name('product-detail');

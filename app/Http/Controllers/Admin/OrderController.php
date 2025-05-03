@@ -348,7 +348,6 @@ class OrderController extends Controller
             $product['price'] = $productDetails ? $productDetails->price : 0;
             $product['total'] = $product['price'] * $product['quantity'];
     
-            // ✅ Get variant_items from productDetails
             $variationText = [];
     
             if ($productDetails && $productDetails->variant_items) {

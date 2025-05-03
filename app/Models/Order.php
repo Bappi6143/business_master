@@ -13,10 +13,22 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
-        'customer_contact', 'customer_name', 'customer_address', 
-        'products', 'order_status', 'delivery_zone_id', 'zone_name',
-        'delivery_charge', 'subtotal', 'discount_amount',
-        'total_price', 'ordered_quantity', 'invoice','courier_partner','trackingid', 'courier_response',
+        'customer_contact',
+        'customer_name',
+        'customer_address',
+        'products',
+        'order_status',
+        'delivery_zone_id',
+        'zone_name',
+        'delivery_charge',
+        'subtotal',
+        'discount_amount',
+        'total_price',
+        'ordered_quantity',
+        'invoice',
+        'courier_partner',
+        'trackingid',
+        'courier_response',
     ];
 
     public function orderItems()
@@ -29,7 +41,7 @@ class Order extends Model
         return $this->belongsTo(DeliveryCharge::class, 'delivery_zone_id');
     }
     public function products()
-{
-    return $this->hasMany(Product::class);
-}
+    {
+        return $this->hasMany(Product::class);
+    }
 }
